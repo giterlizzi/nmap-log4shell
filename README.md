@@ -82,7 +82,7 @@ Copy the provided script (log4shell.nse) into that directory run `nmap --script-
 
 ### Method A:
 
-Download JNDIExploit from GitHub (https://github.com/feihong-cs/JNDIExploit)
+Download JNDIExploit from GitHub (https://github.com/giterlizzi/JNDIExploit/releases/download/v1.2/JNDIExploit.zip)
 
 Start JNDIExploit server:
 
