@@ -119,7 +119,7 @@ action = function(host, port)
 
   end
 
-  table.insert(output, string.format('(!) Sended payload %s using HTTP headers:\n%s\n\nInspect the callback server (%s) or web-application (%s:%s) logs',
+  table.insert(output, string.format('(!) Sent payload %s using HTTP headers:\n%s\n\nInspect the callback server (%s) or web-application (%s:%s) logs',
     exploit_payload,
     http_headers_used,
     callback_server,
