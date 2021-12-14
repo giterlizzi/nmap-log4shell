@@ -77,7 +77,7 @@ Copy the provided script (log4shell.nse) into that directory run `nmap --script-
 #### Arguments
 
 - `log4shell.callback-server`: The callback server (eg. `172.17.42.1:1389`)
-- `log4shell.http-headers`: Comma-separated list of HTTP headers (eg. `X-Api-Version.User-Agent,Referer`)
+- `log4shell.http-headers`: Comma-separated list of HTTP headers (eg. `X-Api-Version,User-Agent,Referer`)
 
 
 ### Method A:
@@ -92,7 +92,7 @@ Run Nmap with --script log4shell.nse script
 
     nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
 
-See JNDIExploit output for see the received LDAP query (Log4Shell/{target host}/{target port})
+See JNDIExploit output for see the received LDAP query (log4shell/{target host}/{target port})
 
     [+] Received LDAP Query: log4shell/127.0.0.1/8080
     [!] Invalid LDAP Query: log4shell/127.0.0.1/8080
