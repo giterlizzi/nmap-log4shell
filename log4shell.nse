@@ -118,6 +118,7 @@ categories = {"vuln", "safe", "external"}
 -- 2021-12-16 - Added "waf-bypass" arg (default: false)
 --            - Added TCP/UDP socket check
 --            - Added "test-method" arg (default: http)
+-- 2021-12-17 - Added support for older Nmap releases (thanks to @giper45)
 --
 
 local http      = require "http"
@@ -126,8 +127,7 @@ local table     = require "table"
 local nmap      = require "nmap"
 local stdnse    = require "stdnse"
 local shortport = require "shortport"
-local stringaux = require "stringaux"
-local tableaux  = require "tableaux"
+
 
 local TESTS = { 'all', 'http', 'tcp', 'udp' }
 local HTTP_METHODS = { 'GET', 'HEAD', 'POST', 'OPTIONS' }
@@ -159,6 +159,36 @@ local WAF_BYPASS_PAYLOADS = {
   '${${::-j}${::-n}${::-d}${::-i}:${::-l}${::-d}${::-a}${::-p}://%s}',
 }
 
+--- Copied from tableaux library for older Nmap releases
+function contains(t, item, array)
+  local iter = array and ipairs or pairs
+  for k, val in iter(t) do
+    if val == item then
+      return true, k
+    end
+  end
+  return false, nil
+end
+
+--- Copied from stringuax library for older Nmap releases
+function strsplit(pattern, text)
+  local list, pos = {}, 1;
+
+  assert(pattern ~= "", "delimiter matches empty string!");
+
+  while true do
+    local first, last = find(text, pattern, pos);
+    if first then -- found?
+      list[#list+1] = sub(text, pos, first-1);
+      pos = last+1;
+    else
+      list[#list+1] = sub(text, pos);
+      break;
+    end
+  end
+  return list;
+end
+
 
 portrule = function(host, port)
   return true
@@ -174,8 +204,8 @@ action = function(host, port)
   local url_path         = stdnse.get_script_args(SCRIPT_NAME .. '.url-path') or '/'
   local test_method      = stdnse.get_script_args(SCRIPT_NAME .. '.test-method') or 'http'
 
-  if not tableaux.contains(TESTS, test_method) then
-    stdnse.verbose1("Skipping '%s' %s, unknown test-method", SCRIPT_NAME, SCRIPT_TYPE)
+  if not contains(TESTS, test_method) then
+    stdnse.print_verbose("Skipping '%s' %s, unknown test-method", SCRIPT_NAME, SCRIPT_TYPE)
     return nil
   end
 
@@ -196,7 +226,7 @@ action = function(host, port)
 
     if shortport.http(host, port) then
 
-      if not tableaux.contains(HTTP_METHODS, http_method:upper()) then
+      if not contains(HTTP_METHODS, http_method:upper()) then
         stdnse.verbose1("Skipping '%s' %s, unknown HTTP method", SCRIPT_NAME, SCRIPT_TYPE)
         return nil
       end
@@ -211,7 +241,7 @@ action = function(host, port)
       output['HTTP Headers'] = {}
     
       if http_headers_arg ~= nil then
-        http_headers = stringaux.strsplit(',', http_headers_arg)
+        http_headers = strsplit(',', http_headers_arg)
       end
     
       for i, payload in ipairs(payloads) do
@@ -221,7 +251,7 @@ action = function(host, port)
     
         for x, payload_header in ipairs(http_headers) do
     
-          stdnse.debug1(string.format('%s --> %s', payload_header, exploit_payload))
+          stdnse.print_debug(1, string.format('%s --> %s', payload_header, exploit_payload))
     
           local header = {
             [payload_header] = exploit_payload
