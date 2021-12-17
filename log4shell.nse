@@ -116,6 +116,8 @@ categories = {"vuln", "safe", "external"}
 --            - Added "url-path" arg (default: /)
 --            - Removed target info in LDAP URI
 -- 2021-12-16 - Added "waf-bypass" arg (default: false)
+--            - Added TCP/UDP socket check
+--            - Added "test-method" arg (default: http)
 --
 
 local http      = require "http"
@@ -127,6 +129,7 @@ local shortport = require "shortport"
 local stringaux = require "stringaux"
 local tableaux  = require "tableaux"
 
+local TESTS = { 'all', 'http', 'tcp', 'udp' }
 local HTTP_METHODS = { 'GET', 'HEAD', 'POST', 'OPTIONS' }
 local HTTP_HEADERS = {'X-Api-Version', 'User-Agent', 'Cookie', 'Referer', 'Accept-Language', 'Accept-Encoding', 'Upgrade-Insecure-Requests', 'Accept', 'upgrade-insecure-requests', 'Origin', 'Pragma', 'X-Requested-With', 'X-CSRF-Token', 'Dnt', 'Content-Length', 'Access-Control-Request-Method', 'Access-Control-Request-Headers', 'Warning', 'Authorization', 'TE', 'Accept-Charset', 'Accept-Datetime', 'Date', 'Expect', 'Forwarded', 'From', 'Max-Forwards', 'Proxy-Authorization', 'Range,', 'Content-Disposition', 'Content-Encoding', 'X-Amz-Target', 'X-Amz-Date', 'Content-Type', 'Username', 'IP', 'IPaddress', 'Hostname'}
 
@@ -170,6 +173,11 @@ action = function(host, port)
   local http_method      = stdnse.get_script_args(SCRIPT_NAME .. '.http-method') or 'GET'
   local url_path         = stdnse.get_script_args(SCRIPT_NAME .. '.url-path') or '/'
   local test_method      = stdnse.get_script_args(SCRIPT_NAME .. '.test-method') or 'http'
+
+  if not tableaux.contains(TESTS, test_method) then
+    stdnse.verbose1("Skipping '%s' %s, unknown test-method", SCRIPT_NAME, SCRIPT_TYPE)
+    return nil
+  end
 
   local payloads = { DEFAULT_PAYLOAD }
   local output = stdnse.output_table()
@@ -242,7 +250,11 @@ action = function(host, port)
   end
 
   -- Check TCP/UDP services
-  if test_method == 'socket' or test_method == 'all' then
+  if test_method == 'tcp' or test_method == 'udp' or test_method == 'all' then
+
+    if test_method ~= 'all' and port.protocol ~= test_method then
+      return nil
+    end
 
     output['Test Method'] = string.format('Socket (%s)', port.protocol)
 
