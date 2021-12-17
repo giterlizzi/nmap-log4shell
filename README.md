@@ -1,6 +1,6 @@
 # Nmap Log4Shell NSE script for discovery Apache Log4j RCE (CVE-2021-44228)
 
-`nmap-log4shell` is a Nmap script to check the **log4shell** vulnerability across the network. The script is able to inject the **log4shell** exploit payload via HTTP Headers (default) or via TCP/UDP socket.
+`nmap-log4shell` is a NSE script for discovery Apache Log4j RCE ([CVE-2021-44228](https://nvd.nist.gov/vuln/detail/CVE-2021-44228)) vulnerability across the network. The script is able to inject the **log4shell** exploit payload via HTTP Headers (default) or via TCP/UDP socket.
 
 ## Vulnerability
 
